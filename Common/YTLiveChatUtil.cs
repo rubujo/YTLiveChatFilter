@@ -55,11 +55,11 @@ public class YTLiveChatUtil
 
                 userCredential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                     clientSecrets: clientSecrets,
-                    scopes: new[]
-                    {
+                    scopes:
+                    [
                         YouTubeService.Scope.Youtube,
                         YouTubeService.Scope.YoutubeForceSsl
-                    },
+                    ],
                     user: Environment.UserName,
                     taskCancellationToken: cancellationToken,
                     dataStore: null,

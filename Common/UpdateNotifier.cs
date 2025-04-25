@@ -61,7 +61,8 @@ public class UpdateNotifier
                     IsException = true,
                     MessageText = $"發生錯誤，找不到 {assemblyName.Name} 應用程式的資料。"
                 };
-            };
+            }
+            ;
 
             if (appData.AppVersion == null)
             {

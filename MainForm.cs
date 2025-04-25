@@ -16,7 +16,8 @@ public partial class MainForm : Form
     private void MainForm_Load(object sender, EventArgs e)
     {
         CustomInit();
-        CheckAppVersion();
+        // TODO: 2025/4/23 暫時先停用版本檢查。
+        //CheckAppVersion();
     }
 
     private void BtnSelectClientSecretFile_Click(object sender, EventArgs e)
@@ -89,7 +90,7 @@ public partial class MainForm : Form
             if (Settings.Default.UseOAuth20 != value)
             {
                 Settings.Default.UseOAuth20 = value;
-                Properties.Settings.Default.Save();
+                Settings.Default.Save();
 
                 string status = value ? "勾選" : "取消勾選";
 
@@ -443,10 +444,7 @@ public partial class MainForm : Form
     {
         try
         {
-            TBVideoID.InvokeIfRequired(action: () =>
-            {
-                TBVideoID.Clear();
-            });
+            TBVideoID.InvokeIfRequired(action: TBVideoID.Clear);
 
             TBSuspiciousChannelIds.InvokeIfRequired(action: () =>
             {
@@ -457,10 +455,7 @@ public partial class MainForm : Form
                 SuspiciousChannels.Clear();
             });
 
-            TBLog.InvokeIfRequired(action: () =>
-            {
-                TBLog.Clear();
-            });
+            TBLog.InvokeIfRequired(action: TBLog.Clear);
         }
         catch (Exception ex)
         {

@@ -1,4 +1,5 @@
-﻿using Google.Apis.YouTube.v3.Data;
+﻿using Ganss.Text;
+using Google.Apis.YouTube.v3.Data;
 using System.Reflection;
 using System.Timers;
 using YTLiveChatFilter.Common;
@@ -53,10 +54,7 @@ public partial class MainForm
             TBClientSecretFilePath.Text = Settings.Default.ClientSecretPath;
         });
 
-        TBVideoID.InvokeIfRequired(action: () =>
-        {
-            TBVideoID.Select();
-        });
+        TBVideoID.InvokeIfRequired(action: TBVideoID.Select);
 
         TBBanWords.InvokeIfRequired(action: () =>
         {
@@ -108,7 +106,7 @@ public partial class MainForm
                 string value = Settings.Default.DefaultBanWords;
 
                 string[] defaultDeniedWords = value.Split(
-                    separator: new char[] { ',' },
+                    separator: [','],
                     options: StringSplitOptions.RemoveEmptyEntries);
 
                 TBBanWords.Text = string.Join(
@@ -131,88 +129,88 @@ public partial class MainForm
         {
             try
             {
-                if (SharedYouTubeService != null)
-                {
-                    bool banTemporary = false,
-                        banPermanent = false,
-                        deleteMessage = false,
-                        useOAuth20 = false;
-
-                    int banDuration = 300;
-
-                    CBUseOAuth20.InvokeIfRequired(action: () =>
-                    {
-                        useOAuth20 = CBUseOAuth20.Checked;
-                    });
-
-                    CBBanTemporary.InvokeIfRequired(action: () =>
-                    {
-                        banTemporary = CBBanTemporary.Checked;
-                    });
-
-                    CBBanPermanent.InvokeIfRequired(action: () =>
-                    {
-                        banPermanent = CBBanPermanent.Checked;
-                    });
-
-                    CBDeleteMessage.InvokeIfRequired(action: () =>
-                    {
-                        deleteMessage = CBDeleteMessage.Checked;
-                    });
-
-                    NUPBanDuration.InvokeIfRequired(action: () =>
-                    {
-                        banDuration = Convert.ToInt32(value: NUPBanDuration.Value);
-                    });
-
-                    LiveChatMessagesResp response = await YTLiveChatUtil.GetLiveChatMessagesResp(
-                        youTubeService: SharedYouTubeService,
-                        liveChatId: SharedLiveChatID,
-                        pageToken: SharedNextPageToken,
-                        control: TBLog);
-
-                    SharedNextPageToken = response.NextPageToken;
-                    SharedPollingIntervalMillis = Convert.ToDouble(value: response.PollingIntervalMillis);
-
-                    CustomFunction.WriteLog(
-                        control: TBLog,
-                        message: $"在 {SharedPollingIntervalMillis} 毫秒後進行下一次資料抓取。");
-
-                    FilterMessages(
-                        items: response.Items,
-                        deleteMessage: deleteMessage,
-                        banTemporary: banTemporary,
-                        banPermanent: banPermanent,
-                        banDuration: banDuration,
-                        useOAuth20: useOAuth20);
-
-                    if (!string.IsNullOrEmpty(value: SharedNextPageToken))
-                    {
-                        SharedTimer.Interval = Convert.ToDouble(value: response.PollingIntervalMillis);
-                    }
-                    else
-                    {
-                        CustomFunction.WriteLog(
-                            control: TBLog,
-                            message: "SharedNextPageToken 為空值，停止作業。");
-
-                        BtnStop_Click(sender: null, e: null);
-                    }
-                }
-                else
+                if (SharedYouTubeService == null)
                 {
                     CustomFunction.WriteLog(
                         control: TBLog,
                         message: "SharedYTSvc 為 null，停止作業。");
 
                     BtnStop_Click(sender: null, e: null);
+
+                    return;
                 }
+
+                bool banTemporary = false,
+                    banPermanent = false,
+                    deleteMessage = false,
+                    useOAuth20 = false;
+
+                int banDuration = 300;
+
+                CBUseOAuth20.InvokeIfRequired(action: () =>
+                {
+                    useOAuth20 = CBUseOAuth20.Checked;
+                });
+
+                CBBanTemporary.InvokeIfRequired(action: () =>
+                {
+                    banTemporary = CBBanTemporary.Checked;
+                });
+
+                CBBanPermanent.InvokeIfRequired(action: () =>
+                {
+                    banPermanent = CBBanPermanent.Checked;
+                });
+
+                CBDeleteMessage.InvokeIfRequired(action: () =>
+                {
+                    deleteMessage = CBDeleteMessage.Checked;
+                });
+
+                NUPBanDuration.InvokeIfRequired(action: () =>
+                {
+                    banDuration = Convert.ToInt32(value: NUPBanDuration.Value);
+                });
+
+                LiveChatMessagesResp response = await YTLiveChatUtil.GetLiveChatMessagesResp(
+                    youTubeService: SharedYouTubeService,
+                    liveChatId: SharedLiveChatID,
+                    pageToken: SharedNextPageToken,
+                    control: TBLog);
+
+                SharedNextPageToken = response.NextPageToken;
+                SharedPollingIntervalMillis = Convert.ToDouble(value: response.PollingIntervalMillis);
+
+                CustomFunction.WriteLog(
+                    control: TBLog,
+                    message: $"在 {SharedPollingIntervalMillis} 毫秒後進行下一次資料抓取。");
+
+                FilterMessages(
+                    items: response.Items,
+                    deleteMessage: deleteMessage,
+                    banTemporary: banTemporary,
+                    banPermanent: banPermanent,
+                    banDuration: banDuration,
+                    useOAuth20: useOAuth20);
+
+                if (string.IsNullOrEmpty(value: SharedNextPageToken))
+                {
+                    CustomFunction.WriteLog(
+                        control: TBLog,
+                        message: "SharedNextPageToken 為空值，停止作業。");
+
+                    BtnStop_Click(sender: null, e: null);
+
+                    return;
+                }
+
+                SharedTimer.Interval = Convert.ToDouble(value: response.PollingIntervalMillis);
             }
             catch (Exception ex)
             {
                 CustomFunction.WriteLog(
-                control: TBLog,
-                message: ex.Message);
+                    control: TBLog,
+                    message: ex.Message);
 
                 BtnStop_Click(sender: null, e: null);
             }
@@ -316,195 +314,147 @@ public partial class MainForm
         int banDuration,
         bool useOAuth20)
     {
-        if (items != null)
-        {
-            // 使用頻道 ID 進行 Grouping。
-            IEnumerable<IGrouping<string, LiveChatMessage>> groupedDataSet =
-                 items.GroupBy(keySelector: n => n.AuthorDetails.ChannelId);
-
-            // 逐個組合處理。
-            foreach (IGrouping<string, LiveChatMessage> dataSet in groupedDataSet)
-            {
-                // 逐筆訊息處理。
-                foreach (LiveChatMessage data in dataSet)
-                {
-                    bool isDetected = false;
-
-                    string logTemplate = Environment.NewLine +
-                        $"---{Environment.NewLine}" +
-                        $"頻道網址：{{0}}{Environment.NewLine}" +
-                        $"頻道 ID：{{1}}{Environment.NewLine}" +
-                        $"使用者：{{2}}{Environment.NewLine}" +
-                        $"訊息 ID：{{3}}{Environment.NewLine}" +
-                        $"訊息內容：{{4}}{Environment.NewLine}" +
-                        $"---";
-
-                    string channelId = data.AuthorDetails.ChannelId;
-                    string originAuthorName = data.AuthorDetails.DisplayName;
-                    string authorName = data.AuthorDetails.DisplayName.ToLowerInvariant();
-                    string messageId = data.Id;
-                    string originMessage = data.Snippet.DisplayMessage;
-                    string message = data.Snippet.DisplayMessage.ToLowerInvariant();
-                    string log = string.Format(
-                        format: logTemplate,
-                        args: new[] {
-                            $"https://www.youtube.com/channel/{channelId}",
-                            channelId,
-                            originAuthorName,
-                            messageId,
-                            originMessage
-                        });
-
-                    // 檢查使用者的名稱。
-                    isDetected = CustomFunction.CheckBanWords(
-                        control: TBLog,
-                        key: dataSet.Key,
-                        channelId: channelId,
-                        originAuthorName: originAuthorName,
-                        value: authorName,
-                        banWords: BanWords,
-                        log: log,
-                        suspiciousChannelIds: SuspiciousChannelIds,
-                        suspiciousChannels: SuspiciousChannels,
-                        action: () =>
-                        {
-                            UpdateTBSuspiciousChannelIds();
-                        },
-                        isAuthor: true);
-
-                    // 當 isDetected 為 false 時才執行。
-                    if (!isDetected)
-                    {
-                        // 檢查訊息的內容。
-                        isDetected = CustomFunction.CheckBanWords(
-                            control: TBLog,
-                            key: dataSet.Key,
-                            channelId: channelId,
-                            originAuthorName: originAuthorName,
-                            value: message,
-                            banWords: BanWords,
-                            log: log,
-                            suspiciousChannelIds: SuspiciousChannelIds,
-                            suspiciousChannels: SuspiciousChannels,
-                            action: () =>
-                            {
-                                UpdateTBSuspiciousChannelIds();
-                            },
-                            isAuthor: false);
-                    }
-
-                    if (isDetected)
-                    {
-                        if (useOAuth20)
-                        {
-                            try
-                            {
-                                bool isChatOwner = data.AuthorDetails.IsChatOwner ?? false;
-                                bool isChatModerator = data.AuthorDetails.IsChatModerator ?? false;
-                                _ = data.AuthorDetails.IsChatSponsor ?? false;
-                                _ = data.AuthorDetails.IsVerified ?? false;
-
-                                // 針對「擁有者」以及「管理員」不進行過濾。
-                                if (!isChatOwner && !isChatModerator)
-                                {
-                                    // 刪除訊息。
-                                    if (deleteMessage)
-                                    {
-                                        // 會回傳空值。
-                                        _ = await YTLiveChatUtil.DeleteMessage(
-                                            youTubeService: SharedYouTubeService,
-                                            messageId: messageId,
-                                            control: TBLog);
-
-                                        CustomFunction.WriteLog(
-                                            control: TBLog,
-                                            message: $"已刪除含有封鎖的字詞的訊息。（訊息 ID：{messageId}）");
-                                    }
-
-                                    // 封鎖使用者。
-                                    if (banTemporary || banPermanent)
-                                    {
-                                        LiveChatBan liveChatBan = YTLiveChatUtil.CreatLiveChatBan(
-                                            liveChatId: SharedLiveChatID,
-                                            channelId: channelId,
-                                            banPermanent: banPermanent,
-                                            banDuration: banDuration);
-
-                                        LiveChatBan? banResult = await YTLiveChatUtil.BanUser(
-                                            youTubeService: SharedYouTubeService,
-                                            liveChatBan: liveChatBan,
-                                            control: TBLog);
-
-                                        // 不會含有 "BanDurationSeconds"。
-                                        if (banResult != null)
-                                        {
-                                            string banType = banPermanent ? "加入至隱藏的使用者" : "暫時停用";
-                                            string banDurationStr = banPermanent ? "" : $" {banDuration} 秒";
-                                            string channel = $"{banResult.Snippet.BannedUserDetails.DisplayName}" +
-                                                $"（{banResult.Snippet.BannedUserDetails.ChannelId}）";
-                                            string resultLog = $"已將使用者 {channel} {banType}{banDurationStr}";
-
-                                            CustomFunction.WriteLog(
-                                                control: TBLog,
-                                                message: resultLog);
-                                        }
-                                        else
-                                        {
-                                            CustomFunction.WriteLog(
-                                                control: TBLog,
-                                                message: "YTLiveChatUtil.BanUser() 回傳的 banResult 是 null。");
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    string role = "無關人員";
-
-                                    if (isChatModerator)
-                                    {
-                                        role = "管理員";
-                                    }
-
-                                    if (isChatOwner)
-                                    {
-                                        role = "擁有者";
-                                    }
-
-                                    string msgHasSpecialRole = $"頻道「{originAuthorName}（{channelId}）」" +
-                                        $"是此頻道的「{role}」，故忽略不進行後續的處理。";
-
-                                    CustomFunction.WriteLog(
-                                        control: TBLog,
-                                        message: msgHasSpecialRole);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                CustomFunction.WriteLog(
-                                    control: TBLog,
-                                    message: ex.Message);
-                            }
-                        }
-                        else
-                        {
-                            string msgNotUseOAtuth = "因為您使用「API 金鑰」，" +
-                                "所以只會將頻道的 ID 加入至可疑的頻道 ID 清單內。";
-
-                            CustomFunction.WriteLog(
-                                control: TBLog,
-                                message: msgNotUseOAtuth);
-                        }
-
-                        break;
-                    }
-                }
-            }
-        }
-        else
+        if (items == null)
         {
             CustomFunction.WriteLog(
                 control: TBLog,
                 message: "傳入 FilterMessages() 的 items 是 null。");
+
+            return;
+        }
+
+        // 使用頻道 ID 進行 Grouping。
+        IEnumerable<IGrouping<string, LiveChatMessage>> groupedDataSet =
+             items.GroupBy(keySelector: n => n.AuthorDetails.ChannelId);
+
+        // 逐個組合處理。
+        foreach (IGrouping<string, LiveChatMessage> dataSet in groupedDataSet)
+        {
+            // 逐筆訊息處理。
+            foreach (LiveChatMessage liveChatMessage in dataSet)
+            {
+                bool isDetected = false;
+
+                // 初始化 AhoCorasick。
+                AhoCorasick ahoCorasick = new(
+                       comparer: CharComparer.CurrentCultureIgnoreCase,
+                       words: BanWords);
+
+                isDetected = CustomFunction.CheckBanWords(
+                    control: TBLog,
+                    ahoCorasick: ahoCorasick,
+                    liveChatMessage: liveChatMessage,
+                    suspiciousChannelIds: ref SuspiciousChannelIds,
+                    suspiciousChannels: ref SuspiciousChannels,
+                    action: UpdateTBSuspiciousChannelIds);
+
+                if (!isDetected)
+                {
+                    continue;
+                }
+
+                if (!useOAuth20)
+                {
+                    CustomFunction.WriteLog(
+                       control: TBLog,
+                       message: "因為您使用「API 金鑰」，" +
+                           "所以只會將頻道的 ID 加入至可疑的頻道 ID 清單內。");
+
+                    continue;
+                }
+
+                try
+                {
+                    string channelId = liveChatMessage.AuthorDetails.ChannelId,
+                        authorName = liveChatMessage.AuthorDetails.DisplayName,
+                        messageId = liveChatMessage.Id;
+
+                    bool isChatOwner = liveChatMessage.AuthorDetails.IsChatOwner ?? false,
+                        isChatModerator = liveChatMessage.AuthorDetails.IsChatModerator ?? false,
+                        _isChatSponsor = liveChatMessage.AuthorDetails.IsChatSponsor ?? false,
+                        _isVerified = liveChatMessage.AuthorDetails.IsVerified ?? false;
+
+                    // 針對「擁有者」以及「管理員」不進行過濾。
+                    if (isChatOwner || isChatModerator)
+                    {
+                        string role = "無關人員";
+
+                        if (isChatModerator)
+                        {
+                            role = "管理員";
+                        }
+
+                        if (isChatOwner)
+                        {
+                            role = "擁有者";
+                        }
+
+                        string msgHasSpecialRole = $"頻道「{authorName}（{channelId}）」" +
+                            $"是此頻道的「{role}」，故忽略不進行後續的處理。";
+
+                        CustomFunction.WriteLog(
+                            control: TBLog,
+                            message: msgHasSpecialRole);
+
+                        continue;
+                    }
+
+                    // 刪除訊息。
+                    if (deleteMessage)
+                    {
+                        // 會回傳空值。
+                        _ = await YTLiveChatUtil.DeleteMessage(
+                            youTubeService: SharedYouTubeService,
+                            messageId: messageId,
+                            control: TBLog);
+
+                        CustomFunction.WriteLog(
+                            control: TBLog,
+                            message: $"已刪除含有封鎖的字詞的訊息。（訊息 ID：{messageId}）");
+                    }
+
+                    // 封鎖使用者。
+                    if (banTemporary || banPermanent)
+                    {
+                        LiveChatBan liveChatBan = YTLiveChatUtil.CreatLiveChatBan(
+                            liveChatId: SharedLiveChatID,
+                            channelId: channelId,
+                            banPermanent: banPermanent,
+                            banDuration: banDuration);
+
+                        LiveChatBan? banResult = await YTLiveChatUtil.BanUser(
+                            youTubeService: SharedYouTubeService,
+                            liveChatBan: liveChatBan,
+                            control: TBLog);
+
+                        if (banResult == null)
+                        {
+                            CustomFunction.WriteLog(
+                                control: TBLog,
+                                message: "YTLiveChatUtil.BanUser() 回傳的 banResult 是 null。");
+
+                            continue;
+                        }
+
+                        // 不會含有 "BanDurationSeconds"。
+                        string banType = banPermanent ? "加入至隱藏的使用者" : "暫時停用",
+                            banDurationStr = banPermanent ? string.Empty : $" {banDuration} 秒",
+                            channel = $"{banResult.Snippet.BannedUserDetails.DisplayName}" +
+                                $"（{banResult.Snippet.BannedUserDetails.ChannelId}）",
+                                resultLog = $"已將使用者 {channel} {banType}{banDurationStr}";
+
+                        CustomFunction.WriteLog(
+                            control: TBLog,
+                            message: resultLog);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CustomFunction.WriteLog(
+                        control: TBLog,
+                        message: ex.Message);
+                }
+            }
         }
     }
 

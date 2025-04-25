@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using Ganss.Text;
+using Google.Apis.YouTube.v3.Data;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using YTLiveChatFilter.Extensions;
 
@@ -29,61 +31,72 @@ public class CustomFunction
     /// 檢查封鎖的字詞
     /// </summary>
     /// <param name="control">TextBox</param>
-    /// <param name="key">字串，鍵值</param>
-    /// <param name="channelId">字串，頻道的 ID 值</param>
-    /// <param name="originAuthorName">字串，原始的使用者名稱</param>
-    /// <param name="value">字串，值</param>
-    /// <param name="banWords">List&lt;string&gt;，封鎖的字詞</param>
-    /// <param name="log">字串，紀錄</param>
+    /// <param name="ahoCorasick">AhoCorasick</param>
+    /// <param name="liveChatMessage">LiveChatMessage</param>
     /// <param name="suspiciousChannelIds">List&lt;string&gt;，可疑的頻道 ID</param>
     /// <param name="suspiciousChannels">Dictionary&lt;string, string&gt;，可疑的頻道</param>
     /// <param name="action">MethodInvoker</param>
-    /// <param name="isAuthor">布林值，是否為使用者</param>
     /// <returns>布林值</returns>
     public static bool CheckBanWords(
         TextBox control,
-        string key,
-        string channelId,
-        string originAuthorName,
-        string value,
-        List<string> banWords,
-        string log,
-        List<string> suspiciousChannelIds,
-        Dictionary<string, string> suspiciousChannels,
-        MethodInvoker action,
-        bool isAuthor)
+        AhoCorasick ahoCorasick,
+        LiveChatMessage liveChatMessage,
+        ref List<string> suspiciousChannelIds,
+        ref Dictionary<string, string> suspiciousChannels,
+        MethodInvoker action)
     {
         bool isDetected = false;
 
-        string detectedType = isAuthor ? "使用者" : "訊息";
+        string channelId = liveChatMessage.AuthorDetails.ChannelId,
+            authorName = liveChatMessage.AuthorDetails.DisplayName,
+            messageId = liveChatMessage.Id,
+            message = liveChatMessage.Snippet.DisplayMessage,
+            logContent = string.Format(
+                format: Environment.NewLine +
+                    $"---{Environment.NewLine}" +
+                    $"頻道網址：{{0}}{Environment.NewLine}" +
+                    $"頻道 ID：{{1}}{Environment.NewLine}" +
+                    $"使用者：{{2}}{Environment.NewLine}" +
+                    $"訊息 ID：{{3}}{Environment.NewLine}" +
+                    $"訊息內容：{{4}}{Environment.NewLine}" +
+                    "---",
+                args:
+                    [
+                        $"https://www.youtube.com/channel/{channelId}",
+                        channelId,
+                        authorName,
+                        messageId,
+                        message
+                    ]);
 
-        // 循例檢查 "value" 是否含有封鎖的字詞。
-        foreach (string banWord in banWords)
+        // 檢查 "authorName" 是否含有封鎖的字詞。
+        List<WordMatch> listWordMatch1 = [.. ahoCorasick.Search(text: authorName)];
+
+        // 檢查 "message" 是否含有封鎖的字詞。
+        List<WordMatch> listWordMatch2 = [.. ahoCorasick.Search(text: message)];
+
+        if (listWordMatch1.Count > 0 ||
+            listWordMatch2.Count > 0)
         {
-            if (value.Contains(value: banWord))
+            isDetected = true;
+
+            if (!suspiciousChannels.Any(predicate: n => n.Key == channelId))
             {
-                isDetected = true;
-
-                if (!suspiciousChannels.Any(predicate: n => n.Key == channelId))
-                {
-                    suspiciousChannels.Add(key: channelId, value: originAuthorName);
-                }
-
-                if (!suspiciousChannelIds.Any(predicate: n => n == channelId))
-                {
-                    suspiciousChannelIds.Add(item: channelId);
-
-                    WriteLog(
-                        control: control,
-                        message: $"[{detectedType}] 頻道「{originAuthorName}（{key}）」，已加入至可疑的頻道 ID 清單。");
-
-                    action();
-                }
-
-                WriteLog(control: control, message: log);
-
-                break;
+                suspiciousChannels.Add(key: channelId, value: authorName);
             }
+
+            if (!suspiciousChannelIds.Any(predicate: n => n == channelId))
+            {
+                suspiciousChannelIds.Add(item: channelId);
+
+                action();
+
+                WriteLog(
+                    control: control,
+                    message: $"頻道「{authorName}（{channelId}）」，已加入至可疑的頻道 ID 清單。");
+            }
+
+            WriteLog(control: control, message: logContent);
         }
 
         return isDetected;
@@ -125,7 +138,7 @@ public class CustomFunction
                             separator: Environment.NewLine.ToCharArray(),
                             options: StringSplitOptions.RemoveEmptyEntries);
 
-                        if (values.Any())
+                        if (values.Length > 0)
                         {
                             string copiedContent = string.Empty;
 
@@ -150,7 +163,7 @@ public class CustomFunction
                 }
                 else if (e.ClickedItem == tsiViewSuspiciousChannelName)
                 {
-                    if (suspiciousChannels.Any())
+                    if (suspiciousChannels.Count > 0)
                     {
                         Form PopupForm = new()
                         {

@@ -30,17 +30,17 @@ public partial class MainForm
     /// <summary>
     /// 封鎖的字詞
     /// </summary>
-    private readonly List<string> BanWords = new();
+    private readonly List<string> BanWords = [];
 
     /// <summary>
     /// 可疑的頻道 ID
     /// </summary>
-    private readonly List<string> SuspiciousChannelIds = new();
+    private List<string> SuspiciousChannelIds = [];
 
     /// <summary>
     /// 可疑的頻道
     /// </summary>
-    private readonly Dictionary<string, string> SuspiciousChannels = new();
+    private Dictionary<string, string> SuspiciousChannels = [];
 
     /// <summary>
     /// 共享的 YouTubeService

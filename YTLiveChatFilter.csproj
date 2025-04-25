@@ -2,12 +2,15 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net7.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.0.10</Version>
+    <Version>1.1.2</Version>
     <ApplicationIcon>Resources\app_icon.ico</ApplicationIcon>
+    <Authors>perditavojo</Authors>
+    <Company>垃圾桶</Company>
+    <Description>簡易的 YouTube 聊天室過濾器。</Description>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -23,8 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.57.0.2827" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
+    <PackageReference Include="AhoCorasick" Version="2.0.279" />
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.69.0.3742" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
